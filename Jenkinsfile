@@ -1,7 +1,15 @@
 pipeline {
     agent any
 
+    environment {
+        AWS_REGION = 'eu-west-1'
+        ECR_REPO = 'cicd-app'
+        ACCOUNT_ID = '879381245825'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -19,15 +27,37 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t cicd-app:${BUILD_NUMBER} .'
+                sh 'docker build -t $ECR_REPO:$IMAGE_TAG .'
             }
         }
 
-        stage('Run Container') {
+        stage('Login to ECR') {
             steps {
                 sh '''
-                docker rm -f cicd-app-container || true
-                docker run -d -p 8080:8080 --name cicd-app-container cicd-app:${BUILD_NUMBER}
+                aws ecr get-login-password --region $AWS_REGION \
+                | docker login --username AWS --password-stdin $879381245825.dkr.ecr.$AWS_REGION.amazonaws.com
+                '''
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                sh '''
+                docker tag $ECR_REPO:$IMAGE_TAG $879381245825.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+                docker push $879381245825.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+                '''
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                sh '''
+                aws eks update-kubeconfig --region $AWS_REGION --name cicd-cluster
+
+                kubectl set image deployment/cicd-app \
+                cicd-app=$879381245825.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+
+                kubectl rollout status deployment/cicd-app
                 '''
             }
         }
