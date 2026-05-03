@@ -27,15 +27,17 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $ECR_REPO:$IMAGE_TAG .'
+                sh '''
+                docker build -t $ECR_REPO:$IMAGE_TAG .
+                '''
             }
         }
 
         stage('Login to ECR') {
             steps {
                 sh '''
-                aws ecr get-login-password --region $AWS_REGION \
-                | docker login --username AWS --password-stdin $879381245825.dkr.ecr.$AWS_REGION.amazonaws.com
+                aws ecr get-login-password --region $AWS_REGION > ecr_pass.txt
+                cat ecr_pass.txt | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
                 '''
             }
         }
@@ -43,8 +45,8 @@ pipeline {
         stage('Push to ECR') {
             steps {
                 sh '''
-                docker tag $ECR_REPO:$IMAGE_TAG $879381245825.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
-                docker push $879381245825.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+                docker tag $ECR_REPO:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+                docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
                 '''
             }
         }
@@ -55,7 +57,7 @@ pipeline {
                 aws eks update-kubeconfig --region $AWS_REGION --name cicd-cluster
 
                 kubectl set image deployment/cicd-app \
-                cicd-app=$879381245825.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+                cicd-app=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
 
                 kubectl rollout status deployment/cicd-app
                 '''
