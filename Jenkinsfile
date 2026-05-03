@@ -8,14 +8,11 @@ pipeline {
             }
         }
 
-        stage('Build App (Maven inside Docker)') {
+        stage('Build App') {
             steps {
                 sh '''
-                docker run --rm \
-                -v $(pwd):/app \
-                -w /app \
-                maven:3.9.9-eclipse-temurin-17 \
-                mvn clean package
+                chmod +x mvnw
+                ./mvnw clean package
                 '''
             }
         }
