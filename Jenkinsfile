@@ -8,9 +8,15 @@ pipeline {
             }
         }
 
-        stage('Build App') {
+        stage('Build App (Maven inside Docker)') {
             steps {
-                sh 'mvn clean package'
+                sh '''
+                docker run --rm \
+                -v $(pwd):/app \
+                -w /app \
+                maven:3.9.9-eclipse-temurin-17 \
+                mvn clean package
+                '''
             }
         }
 
@@ -20,11 +26,11 @@ pipeline {
             }
         }
 
-        stage('Run Container (replace old)') {
+        stage('Run Container') {
             steps {
                 sh '''
                 docker rm -f cicd-app-container || true
-                docker run -d --name cicd-app-container -p 8080:8080 cicd-app:${BUILD_NUMBER}
+                docker run -d -p 8080:8080 --name cicd-app-container cicd-app:${BUILD_NUMBER}
                 '''
             }
         }
