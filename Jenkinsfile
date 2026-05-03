@@ -54,7 +54,7 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 sh '''
-                aws eks update-kubeconfig --region $AWS_REGION --name cicd-cluster
+                aws eks update-kubeconfig --region $AWS_REGION --name cicd-cluster-1
 
                 kubectl set image deployment/cicd-app \
                 cicd-app=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
